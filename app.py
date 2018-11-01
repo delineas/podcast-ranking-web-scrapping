@@ -1,6 +1,20 @@
 from bs4 import BeautifulSoup
 from pprint import pprint
 
+
+def buildContentObject(titleText, childText):
+    contentObject = {
+        'title': titleText.replace('[editar]',''),
+        'anchor': childText
+    }
+    return contentObject
+
+
+def spanWithId(tag):
+    # Si el tag tiene un id entonces nos servirá para añadirlo a la lista toc
+    return tag.name == 'span' and tag.has_attr('id')
+
+
 # Primero debemos definir la función para luego llamarla
 def extract_toc(filepath, body_class='#mw-content-text h3'):
     """
@@ -12,19 +26,30 @@ def extract_toc(filepath, body_class='#mw-content-text h3'):
     except FileNotFoundError:
         print("El fichero no existe") 
     
-    soup = BeautifulSoup(file.read(), "lxml")
+    fileRead = file.read()
+
+    soup = BeautifulSoup(fileRead, features="lxml")
 
     # TOC es una lista
     toc = []
     # Los titulos del contenido estan en este selector
     titles = soup.select(body_class)
-    for i in range(0, len(titles)):
+
+    #breakpoint()
+
+    for title in titles:
         # Leemos los datos hijos de titles (el HTML contiene el ID del anchor)
-        for child in titles[i].children:
-            # Si el hijo tiene un id entonces añadimos a la lista toc 
-            # TODO: El replace de [edit] debería ser un parser posterior
-            toc.append({'title': titles[i].getText().replace('[editar]',''), 'anchor': child.get('id')}) if child.get('id') is not None else None
+        # BeautifulSoup nos permite buscar dentro de una selección
+        spans = title.findAll(spanWithId)
+        
+        for span in spans:
+            
+            childText = span.get('id')
+            titleText = title.getText()
+            contentObject = buildContentObject(titleText, childText=childText)
+            toc.append(contentObject)
 
     return toc
+
 
 pprint(extract_toc("sandbox/content/paella.html"))
